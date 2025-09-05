@@ -89,12 +89,10 @@ export default function OffRamp() {
   
   // Add useEffect to handle transaction success
   useEffect(() => {
-    let intervalId;
-
     if (currentTx?.id) {
-      intervalId = setInterval(async() => {
+      const intervalId = setInterval(async() => {
         try {
-          const response = await fetch(`https://afriramp-backend.onrender.com/api/transactions/${currentTx.id}`);
+          const response = await fetch(`https://afriramp-backend2.onrender.com/api/offramp/${currentTx.id}`);
           if(!response.ok) {
             throw new Error('Failed to fetch transaction status');
           } 
@@ -104,6 +102,8 @@ export default function OffRamp() {
           console.error('Error polling transaction status:', error);
         }
       }, POLL_INTERVAL)
+      
+      return () => clearInterval(intervalId);
     }
 
     if(isWriteSuccess && writeData) {
@@ -111,24 +111,24 @@ export default function OffRamp() {
       // send data to backend
       const sendToBackend = async () => {
         try {
-          const response =  await fetch('https://afriramp-backend.onrender.com/api/transactions', {
+          const response =  await fetch('https://afriramp-backend2.onrender.com/api/offramp', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             },
             // mode: 'cors',
             body: JSON.stringify({
-              txHash: writeData,
+              tx_hash: writeData,
               amount: parseFloat(amount),
               token: selectedToken,
-              fiatAmount: calculateFiatAmount(),
-              fiatCurrency,
-              payoutMethod,
-              mobileNumber,
-              senderAddress: address,
-              recipientAddress: RECIPIENT_ADDRESS,
-              chainId,
-              email
+              fiat_amount: calculateFiatAmount(),
+              fiat_currency: fiatCurrency,
+              payout_method: payoutMethod,
+              mobile_number: mobileNumber,
+              sender_address: address,
+              recipient_address: RECIPIENT_ADDRESS,
+              chain_id: chainId,
+              sender_email: email
             }),
 
           });
@@ -147,19 +147,19 @@ export default function OffRamp() {
           console.error('Full error details:', {
             error,
             request: {
-              url: 'https://afriramp-backend.onrender.com/api/transactions',
+              url: 'https://afriramp-backend.onrender.com/api/offramp',
               method: 'POST',
               body: JSON.stringify({
-                txHash: writeData,
+                tx_hash: writeData,
                 amount: parseFloat(amount),
                 token: selectedToken,
-                fiatAmount: calculateFiatAmount(),
-                fiatCurrency,
-                payoutMethod,
-                mobileNumber,
-                senderAddress: address,
-                recipientAddress: RECIPIENT_ADDRESS,
-                chainId: chainId }),
+                fiat_amount: calculateFiatAmount(),
+                fiat_currency: fiatCurrency,
+                payout_method: payoutMethod,
+                mobile_number: mobileNumber,
+                sender_address: address,
+                recipient_address: RECIPIENT_ADDRESS,
+                chain_id: chainId }),
             }
           });
           setErrorMessage('Failed to save transaction. Please check console for details.');

@@ -3,7 +3,7 @@ import { useAccount, useEstimateFeesPerGas } from 'wagmi';
 import { base } from 'wagmi/chains';
 // import { formatEther } from 'viem';
 import { motion } from 'framer-motion';
-import {  ArrowRight, ChevronDown, Phone, Smartphone } from 'lucide-react';
+import {  ArrowRight, ChevronDown, Phone, Smartphone, Loader2, CheckCircle2 } from 'lucide-react';
  
 
 
@@ -12,17 +12,14 @@ import {  ArrowRight, ChevronDown, Phone, Smartphone } from 'lucide-react';
 
 // Define TypeScript interface for transaction data
 interface OnrampTransaction {
-  userAddress: string;
-  fiatAmount: number;
-  fiatCurrency: string;
-  cryptoAmount: number;
-  cryptoCurrency: string;
-  paymentMethod: string;
-  mobileNumber: string;
-  networkFee: number;
-  processingFee: number;
-  totalAmount: number;
-  email: string;
+  amount: string; // crypto amount to receive
+  fiat_amount: string; // fiat amount being sent
+  fiat_currency: string; // UGX, KSH, etc.
+  payout_network: string; // USDC, USDT, ETH
+  sender_mobile: string; // mobile number of sender
+  sender_email: string; // email of sender
+  recipient_address: string; // wallet address to receive crypto
+  chain_id: number; // blockchain chain ID
 }
 
 export default function OnRamp() {
@@ -40,7 +37,9 @@ export default function OnRamp() {
   const [mobileNumber, setMobileNumber] = useState('');
   const [email, setEmail] = useState('');
   const [ethPrice, setEthPrice] = useState(null); // ETH price in USD
-  const [, setIsSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [transactionId, setTransactionId] = useState<string | null>(null);
 
    //  Rates use states
   const [exchangeRate, setExchangeRate] = useState<string | null>(null);
@@ -206,22 +205,30 @@ export default function OnRamp() {
   };
 
   // Submit transaction to backend
-  // Submit transaction to backend
   const submitTransaction = async (transactionData: OnrampTransaction) => {
     setIsSubmitting(true);
     try {
-      const response = await fetch('https://afriramp-backend2-1.onrender.com/api/onramp', {
+      console.log('Sending transaction data:', transactionData);
+      
+      const response = await fetch('https://afriramp-backend2.onrender.com/api/onramp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(transactionData),
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Transaction failed');
+        console.error('Error response:', errorData);
+        throw new Error(errorData.error || errorData.message || `Transaction failed with status ${response.status}`);
       }
 
       const result = await response.json();
+      console.log('Success response:', result);
+      setIsSuccess(true);
+      setTransactionId(result.id);
       return result;
     } catch (error) {
       console.error('Submission error:', error);
@@ -240,27 +247,19 @@ export default function OnRamp() {
       return;
     }
 
-    const transactionData: OnrampTransaction = {
-      userAddress: address,
-      fiatAmount: parseFloat(fiatAmount),
-      fiatCurrency,
-      cryptoAmount: parseFloat(calculateCryptoAmount()),
-      cryptoCurrency: selectedCrypto,
-      paymentMethod,
-      mobileNumber,
-      email,
-      networkFee: parseFloat(fiatAmount) * 0.01,
-      processingFee: parseFloat(fiatAmount) * 0.025,
-      totalAmount: parseFloat(fiatAmount) * 1.035,
+    const transactionData = {
+      amount: calculateCryptoAmount(),
+      fiat_amount: fiatAmount,
+      fiat_currency: fiatCurrency,
+      payout_network: selectedCrypto,
+      sender_mobile: mobileNumber,
+      sender_email: email,
+      recipient_address: address,
+      chain_id: 8453, // Base mainnet
     };
 
     try {
-      const result = await submitTransaction(transactionData);
-      const paymentMethodName = getPaymentMethods().find(m => m.id === paymentMethod)?.name;
-      
-      window.alert(
-        `Initiated ${paymentMethodName} payment request for ${fiatAmount} ${fiatCurrency} to buy ${calculateCryptoAmount()} ${selectedCrypto}\n\nTransaction ID: ${result.id}`
-      );
+      await submitTransaction(transactionData);
     } catch (err) {
       if (err instanceof Error) {
         window.alert(err.message || 'Failed to submit transaction');
@@ -495,6 +494,26 @@ export default function OnRamp() {
           )}
         </div>
 
+        <div className="mb-6 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+                <span className="text-blue-600 dark:text-blue-400 text-sm">ℹ</span>
+              </div>
+            </div>
+            <div className="ml-3">
+              <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">
+                Important: Deposit Instructions
+              </h4>
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                Send your {fiatCurrency} deposit to <span className="font-semibold">+256700988025</span> using {getPaymentMethods().find(m => m.id === paymentMethod)?.name}. 
+                Your transaction will be processed automatically once payment is confirmed. 
+                If not processed within 15 minutes, please contact us through our Telegram channel for assistance.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div className="mb-6 p-4 rounded-lg bg-slate-50 dark:bg-dark-600">
           <div className="flex justify-between mb-2">
             <span>Amount</span>
@@ -545,6 +564,34 @@ export default function OnRamp() {
           Continue
           <ArrowRight size={18} className="ml-2" />
         </button>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className={'card p-6 text-center mt-3'}
+        >
+          {isSubmitting ? (
+            <div>
+              <Loader2 className='animate-spin h-12 w-12 mx-auto mb-4 text-primary-500' />
+              <p className='text-lg font-semibold mb-2'>Processing Transaction</p>
+              <p className='text-slate-500 dark:text-slate-400'>
+                Please wait while we process your onramp request...
+              </p>
+            </div>
+          ) : isSuccess && transactionId ? (
+            <div>
+              <CheckCircle2 className='h-12 w-12 mx-auto mb-4 text-success-500' />
+              <p className='text-lg font-semibold mb-2'>Transaction Submitted Successfully!</p>
+              <p className='text-slate-500 dark:text-slate-400 mb-4'>
+                Your onramp request for {fiatAmount} {fiatCurrency} to buy {calculateCryptoAmount()} {selectedCrypto} has been submitted.
+              </p>
+              <p className='text-sm text-slate-600 dark:text-slate-300'>
+                Transaction ID: {transactionId}
+              </p>
+            </div>
+          ) : ''
+          }
+        </motion.div>
       </motion.div>
       
       <motion.div

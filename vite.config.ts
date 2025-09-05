@@ -23,13 +23,13 @@ export default defineConfig({
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With'
     },
-    proxy: {
-      '/api': {
-        target: 'https://afriramp-backend2-1.onrender.com/', // your backend URL
-        changeOrigin: true,
-        secure: false,
-        rewrite: path => path.replace(/^\/api/, '')
-      }
-    }
+    // proxy: {
+    //   '/api': {
+    //     target: 'https://afriramp-backend2-1.onrender.com/', // your backend URL
+    //     changeOrigin: true,
+    //     secure: false,
+    //     rewrite: path => path.replace(/^\/api/, '')
+    //   }
+    // }
   }
 });
