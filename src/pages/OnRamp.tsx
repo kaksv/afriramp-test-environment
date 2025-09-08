@@ -1,12 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAccount, useEstimateFeesPerGas } from 'wagmi';
 import { base } from 'wagmi/chains';
-// import { formatEther } from 'viem';
 import { motion } from 'framer-motion';
-import {  ArrowRight, ChevronDown, Phone, Smartphone, Loader2, CheckCircle2 } from 'lucide-react';
- 
-
-
+import { ArrowRight, ChevronDown, Phone, Smartphone, Loader2, CheckCircle2 } from 'lucide-react';
 
 // https://afriramp-backend2.onrender.com/api/onramp  for onramp data
 
@@ -20,13 +16,21 @@ interface OnrampTransaction {
   sender_email: string; // email of sender
   recipient_address: string; // wallet address to receive crypto
   chain_id: number; // blockchain chain ID
+  image_url?: string; // Cloudinary image URL (optional for backend compatibility)
 }
+
+const CLOUDINARY_UPLOAD_PRESET = 'devpost-hackathons';
+const CLOUDINARY_CLOUD_NAME = 'dagn33ye3';
 
 export default function OnRamp() {
   const { address } = useAccount();
-  // const { data: balanceData } = useBalance({ address });
-  
-  // Options state
+
+  // Image upload to cloudinary.
+  const [image, setImage] = useState<File | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Other form State
   const [fiatAmount, setFiatAmount] = useState('100');
   const [paymentMethod, setPaymentMethod] = useState('mtn');
   const [paymentExpanded, setPaymentExpanded] = useState(false);
@@ -36,16 +40,47 @@ export default function OnRamp() {
   const [cryptoExpanded, setCryptoExpanded] = useState(false);
   const [mobileNumber, setMobileNumber] = useState('');
   const [email, setEmail] = useState('');
-  const [ethPrice, setEthPrice] = useState(null); // ETH price in USD
+  const [ethPrice, setEthPrice] = useState<number | null>(null); // ETH price in USD
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [transactionId, setTransactionId] = useState<string | null>(null);
 
-   //  Rates use states
+  // Rates use states
   const [exchangeRate, setExchangeRate] = useState<string | null>(null);
+  const MAX_IMAGE_SIZE_MB = 10;
+
+  // Handle image upload to Cloudinary
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImage(file);
+      setLoading(true);
+
+      // Upload to Cloudinary
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+
+      try {
+        const res = await fetch(
+          `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
+        const data = await res.json();
+        setImageUrl(data.secure_url);
+      } catch (error) {
+        alert("Image upload failed");
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
 
   // useEffect to handle the fetched EthPrice by coingecko.
-  // Fetch ETH price in USD from CoinGecko API on component mount
   useEffect(() => {
     fetch(
       "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"
@@ -66,28 +101,25 @@ export default function OnRamp() {
   }, []);
 
   // useEffect to handle exchangeRate
-    useEffect(() => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      fetch("https://open.er-api.com/v6/latest/USD")
+  useEffect(() => {
+    fetch("https://open.er-api.com/v6/latest/USD")
       .then((response) => {
-        if(!response.ok) {
+        if (!response.ok) {
           throw new Error("Failed to fetch exchange Rate");
         }
         return response.json();
       })
       .then((data) => {
-        if (data && data.rates && data.rates.UGX) {
-          // setExchangeRate(data.rates.UGX.toFixed(2));
-          // setExchangeRate(data.rates[selectedPair].toFixed(2));
+        if (data && data.rates && data.rates[fiatCurrency]) {
           setExchangeRate(data.rates[fiatCurrency].toFixed(2));
-        }else {
+        } else {
           console.warn(`Rate for {fiatCurrency} not found `);
-          setExchangeRate(null)
+          setExchangeRate(null);
         }
       })
       .catch((err) => console.error(err))
       .finally(() => console.log("Exchange rate fetched"));
-    }, [fiatCurrency]);
+  }, [fiatCurrency]);
 
   // Exchange rates (1 USD = X local currency)
   const exchangeRates = {
@@ -102,13 +134,11 @@ export default function OnRamp() {
     USDT: 1.00
   };
 
-
   // calculate gas on the blockchain.
   const gasResult = useEstimateFeesPerGas({
     chainId: base.id,
     formatUnits: 'wei',
-  })
-  
+  });
 
   // Crypto options
   const cryptoOptions = [
@@ -116,14 +146,13 @@ export default function OnRamp() {
     { symbol: 'USDT', name: 'Tether', icon: '₮' },
     { symbol: 'ETH', name: 'Ethereum', icon: 'Ξ' }
   ];
-  
+
   // Fiat currencies
   const fiatCurrencies = [
-    
     { code: 'UGX', symbol: 'USh', name: 'Ugandan Shilling' },
     { code: 'KSH', symbol: 'KSh', name: 'Kenyan Shilling' },
   ];
-  
+
   // Payment methods based on currency
   const getPaymentMethods = () => {
     if (fiatCurrency === 'KSH') {
@@ -138,7 +167,7 @@ export default function OnRamp() {
     }
     return [];
   };
-  
+
   // Calculate estimated crypto amount based on fiat amount
   const calculateCryptoAmount = () => {
     if (!fiatAmount || isNaN(parseFloat(fiatAmount))) return '0';
@@ -147,13 +176,13 @@ export default function OnRamp() {
     const cryptoAmount = usdAmount / cryptoPrices[selectedCrypto as keyof typeof cryptoPrices];
     return selectedCrypto === 'ETH' ? cryptoAmount.toFixed(6) : cryptoAmount.toFixed(2);
   };
-  
+
   // Get current fiat currency symbol
   const getCurrencySymbol = () => {
     const currency = fiatCurrencies.find(c => c.code === fiatCurrency);
     return currency ? currency.symbol : 'KSh';
   };
-  
+
   // Validate mobile number format
   const validateMobileNumber = (number: string) => {
     if (fiatCurrency === 'KSH') {
@@ -165,7 +194,7 @@ export default function OnRamp() {
     }
     return false;
   };
-  
+
   // Format mobile number display
   const formatMobileNumber = (number: string) => {
     if (!number) return '';
@@ -186,19 +215,19 @@ export default function OnRamp() {
     }
     return number;
   };
-  
+
   // Handle mobile number input
   const handleMobileNumberChange = (value: string) => {
     // Remove any non-digit characters
     const cleaned = value.replace(/\D/g, '');
     setMobileNumber(cleaned);
   };
-  
+
   // Handle currency change
   const handleCurrencyChange = (currency: string) => {
     setFiatCurrency(currency);
     // Reset payment method to first available option for new currency
-    const methods = currency === 'UGX' ?  ['mtn', 'airtel'] : ['mpesa'];
+    const methods = currency === 'UGX' ? ['mtn', 'airtel'] : ['mpesa'];
     setPaymentMethod(methods[0]);
     // Reset mobile number
     setMobileNumber('');
@@ -209,7 +238,7 @@ export default function OnRamp() {
     setIsSubmitting(true);
     try {
       console.log('Sending transaction data:', transactionData);
-      
+
       const response = await fetch('https://afriramp-backend2.onrender.com/api/onramp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -238,16 +267,14 @@ export default function OnRamp() {
     }
   };
 
-
-  
   // Handle buy action
   const handleBuy = async () => {
-    if (!address || !fiatAmount || !validateMobileNumber(mobileNumber)) {
-      window.alert('Please fill in all required fields');
+    if (!address || !fiatAmount || !validateMobileNumber(mobileNumber) || !imageUrl) {
+      window.alert('Please fill in all required fields and upload proof image');
       return;
     }
 
-    const transactionData = {
+    const transactionData: OnrampTransaction = {
       amount: calculateCryptoAmount(),
       fiat_amount: fiatAmount,
       fiat_currency: fiatCurrency,
@@ -256,6 +283,7 @@ export default function OnRamp() {
       sender_email: email,
       recipient_address: address,
       chain_id: 8453, // Base mainnet
+      image_url: imageUrl, // Add the Cloudinary URL here
     };
 
     try {
@@ -268,7 +296,7 @@ export default function OnRamp() {
       }
     }
   };
-  
+
   return (
     <div className="space-y-6">
       <motion.div
@@ -278,20 +306,19 @@ export default function OnRamp() {
         className="card"
       >
         <h2 className="text-xl font-semibold mb-6">Buy Stablecoins</h2>
-        
+
         <div className="mb-6">
           <div className="flex justify-between mb-1">
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
               You Pay
             </label>
-              <span className="text-sm text-slate-500 dark:text-slate-400">
-                1 {selectedCrypto} ≈ 
-                {(((Number(exchangeRate)) - Number(exchangeRate) * (2/100)) ).toLocaleString(undefined, { maximumFractionDigits: 2 })}{" "}
-                {/* {(cryptoPrices[selectedCrypto as keyof typeof cryptoPrices] * exchangeRates[fiatCurrency as keyof typeof exchangeRates]).toLocaleString()}  */}
-                {fiatCurrency}
-              </span>
+            <span className="text-sm text-slate-500 dark:text-slate-400">
+              1 {selectedCrypto} ≈
+              {(((Number(exchangeRate)) - Number(exchangeRate) * (2 / 100))).toLocaleString(undefined, { maximumFractionDigits: 2 })}{" "}
+              {fiatCurrency}
+            </span>
           </div>
-          
+
           <div className="flex mb-4">
             <div className="relative flex-grow">
               <input
@@ -305,7 +332,7 @@ export default function OnRamp() {
                 {getCurrencySymbol()}
               </div>
             </div>
-            
+
             <div className="relative ml-2">
               <button
                 onClick={() => setFiatExpanded(!fiatExpanded)}
@@ -314,7 +341,7 @@ export default function OnRamp() {
                 <span>{fiatCurrency}</span>
                 <ChevronDown size={16} className={`ml-2 transition-transform ${fiatExpanded ? 'rotate-180' : ''}`} />
               </button>
-              
+
               {fiatExpanded && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
@@ -342,13 +369,13 @@ export default function OnRamp() {
               )}
             </div>
           </div>
-          
+
           <div className="flex justify-between">
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
               You Receive (Estimated)
             </label>
           </div>
-          
+
           <div className="mt-1 p-4 rounded-lg bg-slate-50 dark:bg-dark-600">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
@@ -357,16 +384,15 @@ export default function OnRamp() {
                 </div>
                 <div>
                   <p className="font-medium">
-                  {((1 / Number(exchangeRate) * 0.98) * Number(fiatAmount)).toLocaleString(undefined, { maximumFractionDigits: 2 })}{" "}
-                    {/* {calculateCryptoAmount()}  */}
+                    {((1 / Number(exchangeRate) * 0.98) * Number(fiatAmount)).toLocaleString(undefined, { maximumFractionDigits: 2 })}{" "}
                     {selectedCrypto}
-                    </p>
+                  </p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">
                     {cryptoOptions.find(c => c.symbol === selectedCrypto)?.name}
                   </p>
                 </div>
               </div>
-              
+
               <div className="relative">
                 <button
                   onClick={() => setCryptoExpanded(!cryptoExpanded)}
@@ -375,7 +401,7 @@ export default function OnRamp() {
                   <span>{selectedCrypto}</span>
                   <ChevronDown size={16} className={`ml-2 transition-transform ${cryptoExpanded ? 'rotate-180' : ''}`} />
                 </button>
-                
+
                 {cryptoExpanded && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
@@ -405,12 +431,12 @@ export default function OnRamp() {
             </div>
           </div>
         </div>
-        
+
         <div className="mb-6">
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
             Payment Method
           </label>
-          
+
           <div className="relative">
             <button
               onClick={() => setPaymentExpanded(!paymentExpanded)}
@@ -422,7 +448,7 @@ export default function OnRamp() {
               </div>
               <ChevronDown size={16} className={`transition-transform ${paymentExpanded ? 'rotate-180' : ''}`} />
             </button>
-            
+
             {paymentExpanded && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
@@ -449,7 +475,7 @@ export default function OnRamp() {
             )}
           </div>
         </div>
-        
+
         <div className="mb-6">
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
             Mobile Number
@@ -460,7 +486,7 @@ export default function OnRamp() {
               value={formatMobileNumber(mobileNumber)}
               onChange={(e) => handleMobileNumberChange(e.target.value)}
               className="input pl-12 ml-2"
-              placeholder={fiatCurrency === 'KSH' ? '0712 345 678' : ( paymentMethod === 'mtn' ? '0770 123 456' : '0700 123 456')}
+              placeholder={fiatCurrency === 'KSH' ? '0712 345 678' : (paymentMethod === 'mtn' ? '0770 123 456' : '0700 123 456')}
             />
             <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500">
               {fiatCurrency === 'KSH' ? '+254' : '+256'}
@@ -472,7 +498,7 @@ export default function OnRamp() {
             </p>
           )}
         </div>
-        
+
         <div className="mb-6">
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
             Email
@@ -494,6 +520,84 @@ export default function OnRamp() {
           )}
         </div>
 
+        {/* Proof Image Upload */}
+<div className="mb-6">
+  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+    Upload Proof of Payment (screenshot or receipt)
+  </label>
+  <div className="flex items-center space-x-4">
+    <input
+      id="proof-image"
+      type="file"
+      accept="image/*"
+      style={{ display: 'none' }}
+      onChange={async (e) => {
+        if (e.target.files && e.target.files[0]) {
+          const file = e.target.files[0];
+          if (file.size > MAX_IMAGE_SIZE_MB * 1024 * 1024) {
+            alert('Image must not exceed 10 MB.');
+            return;
+          }
+          setImage(null);
+          setImageUrl(null);
+          setLoading(true);
+          // Upload to Cloudinary
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+          try {
+            const res = await fetch(
+              `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+              {
+                method: "POST",
+                body: formData,
+              }
+            );
+            const data = await res.json();
+            setImageUrl(data.secure_url);
+            setImage(file);
+          } catch (error) {
+            alert("Image upload failed");
+            console.error(error);
+          } finally {
+            setLoading(false);
+          }
+        }
+      }}
+      disabled={loading}
+    />
+    <button
+      type="button"
+      className="btn btn-secondary"
+      onClick={() => document.getElementById('proof-image')?.click()}
+      disabled={loading}
+    >
+      {imageUrl ? "Change Image" : "Choose Image"}
+    </button>
+    {loading && (
+      <Loader2 className="animate-spin text-blue-600" size={24} />
+    )}
+    {imageUrl && !loading && (
+      <div className="flex items-center space-x-2">
+        <img src={imageUrl} alt="Proof" style={{ width: 80, borderRadius: 8 }} />
+        <button
+          type="button"
+          className="text-xs text-red-500 underline"
+          onClick={() => {
+            setImage(null);
+            setImageUrl(null);
+          }}
+        >
+          Remove
+        </button>
+      </div>
+    )}
+  </div>
+  <p className="text-xs text-slate-500 mt-1">
+    Max file size: 10MB. Accepted formats: JPG, PNG, etc.
+  </p>
+</div>
+
         <div className="mb-6 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
           <div className="flex items-start">
             <div className="flex-shrink-0">
@@ -506,8 +610,8 @@ export default function OnRamp() {
                 Important: Deposit Instructions
               </h4>
               <p className="text-sm text-blue-700 dark:text-blue-300">
-                Send your {fiatCurrency} deposit to <span className="font-semibold">+256700988025</span> using {getPaymentMethods().find(m => m.id === paymentMethod)?.name}. 
-                Your transaction will be processed automatically once payment is confirmed. 
+                Send your {fiatCurrency} deposit to <span className="font-semibold">+256700988025</span> using {getPaymentMethods().find(m => m.id === paymentMethod)?.name}.
+                Your transaction will be processed automatically once payment is confirmed.
                 If not processed within 15 minutes, please contact us through our Telegram channel for assistance.
               </p>
             </div>
@@ -519,17 +623,11 @@ export default function OnRamp() {
             <span>Amount</span>
             <span>
               {((1 / Number(exchangeRate) * 0.98) * Number(fiatAmount)).toLocaleString(undefined, { maximumFractionDigits: 2 })}{" "}
-              {/* {fiatAmount}  */}
               {selectedCrypto}
-              </span>
+            </span>
           </div>
           <div className="flex justify-between mb-2">
             <span>Network Fee</span>
-            {/* <span>
-
-              {(parseFloat(fiatAmount || '0') * 0.01).toFixed(2)}
-               {selectedCrypto}
-             </span> */}
             {gasResult.data?.formatted?.maxFeePerGas
               ? `${(((Number(gasResult.data.formatted.maxPriorityFeePerGas) + Number(gasResult.data.formatted.maxFeePerGas) * Number(ethPrice)) / 1e18) + 0.01).toFixed(3)} USD`
               : '...'}
@@ -544,22 +642,29 @@ export default function OnRamp() {
             <span>Total</span>
             <span>
               {(
-                ((1 / Number(exchangeRate) * 0.98) * Number(fiatAmount)) - 
+                ((1 / Number(exchangeRate) * 0.98) * Number(fiatAmount)) -
                 (
                   (((Number(gasResult.data?.formatted?.maxPriorityFeePerGas ?? 0) + Number(gasResult.data?.formatted?.maxFeePerGas ?? 0)) * Number(ethPrice)) / 1e18) + 0.01
-                ) - 
+                ) -
                 ((1 / Number(exchangeRate) * 0.02) * Number(fiatAmount))
               ).toFixed(2)}{" "}
               {selectedCrypto}
-              {/* {(parseFloat(fiatAmount || '0') * 1.035).toFixed(2)} {fiatCurrency} */}
             </span>
           </div>
         </div>
-        
-        <button 
+
+        <button
           onClick={handleBuy}
           className="btn btn-primary w-full flex items-center justify-center"
-          disabled={!fiatAmount || parseFloat(fiatAmount) <= 0 || !validateMobileNumber(mobileNumber) || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)}
+          disabled={
+            !fiatAmount ||
+            parseFloat(fiatAmount) <= 0 ||
+            !validateMobileNumber(mobileNumber) ||
+            !email ||
+            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
+            !imageUrl ||
+            loading
+          }
         >
           Continue
           <ArrowRight size={18} className="ml-2" />
@@ -593,7 +698,7 @@ export default function OnRamp() {
           }
         </motion.div>
       </motion.div>
-      
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
