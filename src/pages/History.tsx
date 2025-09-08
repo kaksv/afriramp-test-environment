@@ -103,7 +103,7 @@ export default function History() {
         console.log("offrampData", offrampData);
         // Transform onramp data
         const onrampTransactions: Transaction[] = Array.isArray(onrampData)
-          ? onrampData[1].map((tx: any) => ({
+          ? onrampData[0].map((tx: any) => ({
               id: tx.id?.toString() || Math.random().toString(),
               type: 'onramp',
               amount: tx.amount || '0',
