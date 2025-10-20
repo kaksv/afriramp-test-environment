@@ -12,16 +12,17 @@ const config = createConfig({
     // sepolia, 
     base, 
     // baseSepolia, 
-    // celo, 
+    celo, 
     // celoAlfajores, 
     // lisk
   ],
   transports: {
     // [mainnet.id]: http(),
     // [sepolia.id]: http(),
+    [celo.id]: http(),
     [base.id]: http(),
     // [baseSepolia.id]: http(),
-    // [celo.id]: http(),
+    
     // [celoAlfajores.id]: http(),
     // [lisk.id]: http(),
   },
@@ -71,7 +72,7 @@ createWeb3Modal({
     },
   ],                                                                                                                    
   
-  defaultChain: base,
+  defaultChain: celo,
 });
 export const BigScreenProvider = ({ children }: { children: React.ReactNode }) => {
   return (

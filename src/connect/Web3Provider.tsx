@@ -3,17 +3,19 @@ import React from 'react';
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ConnectKitProvider, getDefaultConfig } from 'connectkit';
-import { mainnet, base } from "wagmi/chains";
+import { mainnet, base, celo } from "wagmi/chains";
 // import MyCustomAvatar from '../connect/MyCustomAvatar';
 // import { farcasterFrame } from '@farcaster/frame-wagmi-connector';
 
 const config = createConfig(
   getDefaultConfig({
     
-    chains: [base, ],
+    chains: [ celo, base, mainnet],
     // connectors: [farcasterFrame(), ],
 
     transports: {
+      
+      [celo.id]: http(),
       [base.id]: http(),
       [mainnet.id]: http(),
       

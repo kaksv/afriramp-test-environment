@@ -23,9 +23,9 @@ export default function NetworkSelector() {
       case sepolia.id:
         return { id: chain.id, name: 'Sepolia Testnet', icon: '🟣' };
       case base.id:
-        return { id: chain.id, name: 'Base', icon: '🔵' };
+        return { id: chain.id, name: 'Base', icon: '🟦' };
       case baseSepolia.id:
-        return { id: chain.id, name: 'Base Sepolia', icon: '🟦' };
+        return { id: chain.id, name: 'Base Sepolia', icon: '🔵' };
       case celo.id:
         return { id: chain.id, name: 'Celo', icon: '🌱' };
       case celoAlfajores.id:
