@@ -154,6 +154,7 @@ export default function OnRamp() {
   ];
 
   // Payment methods based on currency
+  // Ok we take it on.
   const getPaymentMethods = () => {
     if (fiatCurrency === 'KSH') {
       return [
