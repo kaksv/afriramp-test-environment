@@ -162,7 +162,7 @@ export default function Welcome() {
                 </h1>
                 
                 <p className="text-2xl md:text-2xl text-slate-600 dark:text-slate-300 mb-8 leading-relaxed">
-                  The simplest way to buy, sell, send, and receive stablecoins in East Africa.
+                  The simplest way to buy, sell, send, and receive stablecoins in East Africa and Central Africa.
                 </p>
               </motion.div>
               

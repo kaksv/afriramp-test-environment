@@ -2,19 +2,20 @@ import { motion } from 'framer-motion';
 import { useAccount, usePublicClient, useConfig } from 'wagmi';
 import { useEffect, useState } from 'react';
 import BalanceCard from '../components/BalanceCard';
-import TransactionHistory from '../components/TransactionHistory';
-import { ArrowRightLeft, Network, PieChart, BellRing } from 'lucide-react';
+// import TransactionHistory from '../components/TransactionHistory';
+import {  BellRing } from 'lucide-react';
+import SwapTokens from '../components/SwapTokens';
 
 export default function Dashboard() {
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
   const config = useConfig();
-  const [transactionCount, setTransactionCount] = useState(0);
-  const [weeklyChange, setWeeklyChange] = useState(0);
-  const [ethPrice, setEthPrice] = useState(0);
-  const [ethPriceChange, setEthPriceChange] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isPriceLoading, setIsPriceLoading] = useState(true);
+  const [, setTransactionCount] = useState(0);
+  const [, setWeeklyChange] = useState(0);
+  const [, setEthPrice] = useState(0);
+  const [, setEthPriceChange] = useState(0);
+  const [, setIsLoading] = useState(true);
+  const [, setIsPriceLoading] = useState(true);
 
   // Get the number of supported chains from the config
   const supportedChainsCount = config.chains.length;
@@ -83,39 +84,39 @@ export default function Dashboard() {
   }, [address, isConnected, publicClient]);
 
   // Metrics data with real values
-  const metrics = [
-    { 
-      name: 'Total Transactions', 
-      value: isLoading ? '...' : transactionCount.toString(), 
-      change: weeklyChange > 0 ? `+${weeklyChange}` : weeklyChange.toString(), 
-      icon: <ArrowRightLeft size={18} />, 
-      color: 'primary',
-      isLoading
-    },
-    { 
-      // name: 'Supported Chains', 
-      name: 'Supported Tokens', 
-      // value: supportedChainsCount.toString(), 
-      value: 2, 
-      // change: 'Networks', 
-      change: 'Tokens', 
-      icon: <Network size={18} />, 
-      color: 'secondary',
-      isLoading: false
-    },
-    { 
-      name: 'ETH Price', 
-      value: isPriceLoading ? '...' : `$${ethPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
-      change: isPriceLoading ? '...' : `${ethPriceChange > 0 ? '+' : ''}${ethPriceChange.toFixed(2)}%`,
-      icon: <PieChart size={18} />, 
-      color: 'accent',
-      isLoading: isPriceLoading
-    },
-  ];
+  // const metrics = [
+  //   { 
+  //     name: 'Total Transactions', 
+  //     value: isLoading ? '...' : transactionCount.toString(), 
+  //     change: weeklyChange > 0 ? `+${weeklyChange}` : weeklyChange.toString(), 
+  //     icon: <ArrowRightLeft size={18} />, 
+  //     color: 'primary',
+  //     isLoading
+  //   },
+  //   { 
+  //     // name: 'Supported Chains', 
+  //     name: 'Supported Tokens', 
+  //     // value: supportedChainsCount.toString(), 
+  //     value: 2, 
+  //     // change: 'Networks', 
+  //     change: 'Tokens', 
+  //     icon: <Network size={18} />, 
+  //     color: 'secondary',
+  //     isLoading: false
+  //   },
+  //   { 
+  //     name: 'ETH Price', 
+  //     value: isPriceLoading ? '...' : `$${ethPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+  //     change: isPriceLoading ? '...' : `${ethPriceChange > 0 ? '+' : ''}${ethPriceChange.toFixed(2)}%`,
+  //     icon: <PieChart size={18} />, 
+  //     color: 'accent',
+  //     isLoading: isPriceLoading
+  //   },
+  // ];
   
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {metrics.map((metric, index) => (
           <motion.div
             key={index}
@@ -159,9 +160,16 @@ export default function Dashboard() {
             </div>
           </motion.div>
         ))}
-      </div>
+      </div> */}
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.4 }}
+        >
+          <SwapTokens />
+        </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -170,13 +178,6 @@ export default function Dashboard() {
           <BalanceCard />
         </motion.div>
         
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.4 }}
-        >
-          <TransactionHistory limit={4} showCount={true} />
-        </motion.div>
       </div>
       
       <motion.div

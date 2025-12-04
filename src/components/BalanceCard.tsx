@@ -40,7 +40,12 @@ const TOKEN_ADDRESSES = {
   1135: {
     USDC: '0x1234567890123456789012345678901234567890', // Replace with actual address when available
     USDT: '0x0987654321098765432109876543210987654321'  // Replace with actual address when available
-  }
+  },
+  // binance
+  56: {
+    USDC: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d',
+    USDT: '0x524bC91Dc82d6b90EF29F76A3ECAaBAffFD490Bc'
+  },
 };
 
 // ERC20 ABI for token balance queries
@@ -90,7 +95,7 @@ export default function BalanceCard() {
   };
   
   const isTokenSupported = (token: 'USDC' | 'USDT') => {
-    return chainId && TOKEN_ADDRESSES[chainId as keyof typeof TOKEN_ADDRESSES]?.[token];
+    return chainId !== undefined && chainId == 56 && TOKEN_ADDRESSES[chainId as keyof typeof TOKEN_ADDRESSES]?.[token];
   };
   
   return (
@@ -106,6 +111,33 @@ export default function BalanceCard() {
         </div>
       ) : (
         <>
+                  <div className="mt-6 grid grid-cols-2 gap-4">
+            <Link 
+              to="/onramp" 
+              className="flex flex-col items-center p-3 rounded-lg border border-slate-200 dark:border-dark-600 hover:bg-slate-50 dark:hover:bg-dark-600 transition-colors"
+            >
+              <motion.div 
+                whileHover={{ scale: 1.1 }}
+                className="w-10 h-10 rounded-full bg-success-100 dark:bg-success-900/20 text-success-600 dark:text-success-400 flex items-center justify-center mb-2"
+              >
+                <span className="text-lg">💵</span>
+              </motion.div>
+              <span className="text-sm font-medium">Buy Stablecoins</span>
+            </Link>
+            <Link 
+              to="/offramp" 
+              className="flex flex-col items-center p-3 rounded-lg border border-slate-200 dark:border-dark-600 hover:bg-slate-50 dark:hover:bg-dark-600 transition-colors"
+            >
+              <motion.div 
+                whileHover={{ scale: 1.1 }}
+                className="w-10 h-10 rounded-full bg-warning-100 dark:bg-warning-900/20 text-warning-600 dark:text-warning-400 flex items-center justify-center mb-2"
+              >
+                <span className="text-lg">💰</span>
+              </motion.div>
+              <span className="text-sm font-medium">Sell Stablecoins</span>
+            </Link>
+          </div>
+          
           <div className="space-y-4 mb-6">
             {/* ETH Balance */}
             <div className="p-4 rounded-lg bg-slate-50 dark:bg-dark-600">
@@ -115,8 +147,8 @@ export default function BalanceCard() {
                     <span className="text-lg">Ξ</span>
                   </div>
                   <div>
-                    <p className="font-medium">Ethereum</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">ETH</p>
+                    <p className="font-medium">Binance</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">BNB</p>
                   </div>
                 </div>
                 <p className="text-xl font-bold">{formatBalance(ethBalance?.value)}</p>
@@ -160,7 +192,7 @@ export default function BalanceCard() {
             )}
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
+          {/* <div className="grid grid-cols-2 gap-4">
             <Link 
               to="/send" 
               className="btn btn-primary flex items-center justify-center"
@@ -175,34 +207,9 @@ export default function BalanceCard() {
               <ArrowDownLeft size={18} className="mr-2" />
               Receive
             </Link>
-          </div>
+          </div> */}
           
-          <div className="mt-6 grid grid-cols-2 gap-4">
-            <Link 
-              to="/onramp" 
-              className="flex flex-col items-center p-3 rounded-lg border border-slate-200 dark:border-dark-600 hover:bg-slate-50 dark:hover:bg-dark-600 transition-colors"
-            >
-              <motion.div 
-                whileHover={{ scale: 1.1 }}
-                className="w-10 h-10 rounded-full bg-success-100 dark:bg-success-900/20 text-success-600 dark:text-success-400 flex items-center justify-center mb-2"
-              >
-                <span className="text-lg">💵</span>
-              </motion.div>
-              <span className="text-sm font-medium">Buy</span>
-            </Link>
-            <Link 
-              to="/offramp" 
-              className="flex flex-col items-center p-3 rounded-lg border border-slate-200 dark:border-dark-600 hover:bg-slate-50 dark:hover:bg-dark-600 transition-colors"
-            >
-              <motion.div 
-                whileHover={{ scale: 1.1 }}
-                className="w-10 h-10 rounded-full bg-warning-100 dark:bg-warning-900/20 text-warning-600 dark:text-warning-400 flex items-center justify-center mb-2"
-              >
-                <span className="text-lg">💰</span>
-              </motion.div>
-              <span className="text-sm font-medium">Sell</span>
-            </Link>
-          </div>
+
         </>
       )}
     </div>
